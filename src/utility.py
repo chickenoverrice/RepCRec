@@ -44,10 +44,12 @@ def parseCommand(item):
         return (mode,record_mode, target,value)
     elif item[0]=='f':                      #fail
         mode=0
+        site_mode=0
         target=int(item[5:])
-        return (mode,target)
+        return (mode,site_mode,target)
     elif item[0]=='d':                      #dump
         mode=0
+        site_mode=2
         if len(item)<6:                    #dump()
             dump_mode=0
             target=None
@@ -57,12 +59,13 @@ def parseCommand(item):
         else:
             dump_mode=1                     #dump(i)
             target=int(item[5:])
-        return (mode,dump_mode, target)
+        return (mode,site_mode,dump_mode, target)
     elif item[0]=='r': 
         if item[1]=='e':                    #recover
             mode=0
+            site_mode=1
             target=int(item[8:])
-            return (mode, target)
+            return (mode, site_mode,target)
         else:                               #read
             mode=2
             record_mode=0
