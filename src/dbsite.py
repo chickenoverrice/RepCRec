@@ -26,12 +26,7 @@ class site:
             self.value[item]=value
     
     def cleanValue(self):
-        for i in range(2,21,2):
-            self.value['x'+str(i)]=None
-        if id%2==0:
-            for i in range(1,20,2):
-                if id==(i%10+1):
-                    self.value['x'+str(i)]=None
+        self.value=dict()
     
     def getLockStatus(self,item):
         return self.lockTable[item]
@@ -70,6 +65,7 @@ class siteManager:
     def __init__(self):
         self.siteCondition=[1 for i in range(10)]    # index of SiteCondition Table is 1 smaller than site id. 0:down 1:up 2:recover 
         self.siteList=dict()
+        self.invertSiteList={'x1':2,'x11':2,'x3':4,'x13':4,'x5':6,'x15':6,'x7':8,'x17':8,'x9':10,'x19':10}
         
     def initSite(self):
         for i in range(1,11):

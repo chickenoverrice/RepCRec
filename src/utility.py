@@ -39,9 +39,11 @@ def parseCommand(item):
         mode=2
         record_mode=1
         item=item.split(',')
+        start=item[0].find('t')
+        transaction_id=int(item[0][start+1:])
         target=item[1]
         value=int(item[2])
-        return (mode,record_mode, target,value)
+        return (mode,record_mode, transaction_id,target,value)
     elif item[0]=='f':                      #fail
         mode=0
         site_mode=0
@@ -69,8 +71,10 @@ def parseCommand(item):
         else:                               #read
             mode=2
             record_mode=0
-            start=item.find('x')
-            target=int(item[start:])
-            return (mode,record_mode, target)
+            item=item.split(',')
+            start=item[0].find('t')
+            transaction_id=int(item[0][start+1:])
+            target=item[1]
+            return (mode,record_mode, transaction_id,target)
     else:
         return None

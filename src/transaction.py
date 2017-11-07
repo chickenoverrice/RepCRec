@@ -15,6 +15,7 @@ class transaction():
         self.currentValue=dict()
         self.startTime=startTime
         self.lockRequest=dict()  #lock not available
+        self.accessedItems=set()
         
     def getLock(self):
         return self.lock
@@ -58,11 +59,20 @@ class transaction():
     def getLockRequest(self):
         return self.lockRequest
     
+    def setAccessedItems(self,item):
+        self.accessedItems.add(item)
+        
+    def getAccessedItems(self):
+        return self.accessedItems
+    
 class transactionManager():
     def __init__(self):
         self.transactionTable=dict()
         self.dataLastValue=dict()           #most updated data value from commited transactions
         
+        for i in range(1,20,2):
+            self.dataLastValue['x'+str(i)]=10*i
+                
     def createTransaction(self,id,mode,startTime):
         self.transactionTable[id]=transaction(id,mode,startTime)
         self.transactionTable[id].setStatus(0)
@@ -79,11 +89,28 @@ class transactionManager():
             for i in range(1,11):
                 sm.updateSite(i,key,transaction.currentValue[key])
         return lock        
-        
-        
+                
     def blockTransaction(self,id,op):
         self.transactionTable[id].setStatus(3)
         self.transactionTable[id].setBuffer(op)
         
-    def endTransaction(self,id):
-        pass
+    def endTransactionStatus(self,id,sm):
+        if self.transactionTable[id].getStatus()!=0:
+            return False        
+        else:
+            count=0
+            accessedItem=self.transactionTable[id].getAccessedItems()
+            #if single copy item accessed on a down site, abort
+            for item in accessedItem:
+                count+=1
+                site=sm.invertSiteList[item]
+                if sm.getSiteCondition(site)==0:
+                    return False
+            #if no site is up:    
+            if count<len(accessedItem):
+                for i in range(10):
+                    if sm.getSiteCondition(i)==1:
+                        return True
+            else:
+                return True
+        return False

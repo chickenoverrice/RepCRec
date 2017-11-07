@@ -49,20 +49,27 @@ def main(verbose,inputFile,stdIN):
                             if op[1]==0 or op[1]==1:
                                 newTM.createTransaction(op[2],op[1],time)
                             else:
-                                newTM.endTransaction(op[2])
+                                canCommit=newTM.endTransactionStatus(op[2],newSM)
+                                if canCommit:
+                                    lockToRelease=newTM.commitTransaction(op[2],newSM)
+                                else:
+                                    newTM.abortTransaction(op[2])
                                 #if commit: newTM.commitTransaction(op[2])
                                 # lock=newTM.transactionTable(op[2]).releaseLock()
                                 # newLM.releaseLock(op[2])
                                 # remove lock in each site
                                 # update value in each site (if site is down for single copy items, abort transaction)
-                                
+                            if verbose:
+                                print(newTM.transactionTable[op[2]].id,newTM.transactionTable[op[2]].mode,
+                                      newTM.transactionTable[op[2]].status)
                         else:
+                            newTM.transactionTable[op[2]].setAccessedItems(op[3])
                             if op[1]==0:
                                 pass
                             else:
                                 pass
-
-    
+                            
+                            
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="A script to build a distributed database and process transactions", formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--verbose', dest='verbose', default=False, action='store_true', help='This will look for an incomplete copy and redo only the incomplete days')
