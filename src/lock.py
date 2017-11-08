@@ -48,4 +48,5 @@ class lockManager:
         '''
         Compare lockRequest to write locks
         '''
-        pass
+        transactionToKill=None
+        return transactionToKill

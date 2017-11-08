@@ -17,8 +17,10 @@ class transaction():
         self.lockRequest=dict()  #lock not available
         self.accessedItems=set()
         
-    def getLock(self):
-        return self.lock
+    def getLock(self,item):
+        if item in self.lock:
+            return self.lock[item]
+        return None
     
     def setLock(self,item,mode):
         if item in self.lock:
@@ -36,6 +38,9 @@ class transaction():
     
     def updateValue(self,item,value):
         self.currentValue[item]=value
+        
+    def getCurrentValue(self,item):
+        return self.currentValue[item]
         
     def setStatus(self,status):
         self.status=status
@@ -73,6 +78,9 @@ class transactionManager():
         for i in range(1,20,2):
             self.dataLastValue['x'+str(i)]=10*i
                 
+    def readValue(self,item):
+        return self.dataLastValue[item]
+    
     def createTransaction(self,id,mode,startTime):
         self.transactionTable[id]=transaction(id,mode,startTime)
         self.transactionTable[id].setStatus(0)

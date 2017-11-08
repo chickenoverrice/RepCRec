@@ -50,6 +50,9 @@ def main(verbose,inputFile,stdIN):
                                 newTM.createTransaction(op[2],op[1],time)
                             else:
                                 canCommit=newTM.endTransactionStatus(op[2],newSM)
+                                transactionToKill=newLM.detectDeadLock()
+                                if op[2]==transactionToKill:
+                                    canCommit=False
                                 if canCommit:
                                     lockToRelease=newTM.commitTransaction(op[2],newSM)
                                 else:
@@ -59,16 +62,49 @@ def main(verbose,inputFile,stdIN):
                                 # newLM.releaseLock(op[2])
                                 # remove lock in each site
                                 # update value in each site (if site is down for single copy items, abort transaction)
+                                # update value in TM datalastvalue
                             if verbose:
                                 print(newTM.transactionTable[op[2]].id,newTM.transactionTable[op[2]].mode,
                                       newTM.transactionTable[op[2]].status)
                         else:
                             newTM.transactionTable[op[2]].setAccessedItems(op[3])
-                            if op[1]==0:
-                                pass
-                            else:
-                                pass
-                            
+                            if op[1]==0:     #read
+                                if newTM.transactionTable[op[2]].mode==0:           #RO
+                                    value=newTM.readValue(op[3])
+                                    print('T'+str(newTM.transactionTable[op[2]].id)+'reads '+op[3]+':'+str(value))
+                                else:           #RW
+                                    availableLock=newTM.transactionTable[op[2]].getLock(op[3])
+                                    if availableLock!=None:     #has lock
+                                        value=newTM.transactionTable[op[2]].getCurrentValue(op[3])
+                                        print('T'+str(newTM.transactionTable[op[2]].id)+'reads '+op[3]+':'+str(value))
+                                    else:       #no lock
+                                        requestLock=newLM.isLockAvailable(op[1],op[3])
+                                        if requestLock:
+                                            newTM.transactionTable[op[2]].setLock(op[3],op[1])
+                                            newLM.setLock(op[1],op[2],op[3])
+                                            value=newTM.transactionTable[op[2]].getCurrentValue(op[3])
+                                            print('T'+str(newTM.transactionTable[op[2]].id)+'reads '+op[3]+':'+str(value))
+                                        else:
+                                            newTM.transactionTable[op[2]].setLockRequest(op[1],op[3])
+                                            newTM.transactionTable[op[2]].setBuffer(op)
+                                            newTM.transactionTable[op[2]].setStatus(3)
+                                            newLM.setLockRequest(op[2],op[3])
+                            else:            #write
+                                availableLock=newTM.transactionTable[op[2]].getLock(op[3])
+                                if availableLock!=None:
+                                    newTM.transactionTable[op[2]].updateValue(op[3],op[4])
+                                else:
+                                    requestLock=newLM.isLockAvailable(op[1],op[3])
+                                    if requestLock:
+                                        newTM.transactionTable[op[2]].setLock(op[3],op[1])
+                                        newLM.setLock(op[1],op[2],op[3])
+                                        newTM.transactionTable[op[2]].updateValue(op[3],op[4])
+                                    else:
+                                        newTM.transactionTable[op[2]].setLockRequest(op[1],op[3])
+                                        newTM.transactionTable[op[2]].setBuffer(op)
+                                        newTM.transactionTable[op[2]].setStatus(3)
+                                        newLM.setLockRequest(op[2],op[3])
+                        
                             
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="A script to build a distributed database and process transactions", formatter_class=argparse.RawDescriptionHelpFormatter)
