@@ -50,7 +50,7 @@ class site:
     
     def resetLock(self,item,transaction):
         if item not in self.lockTable:
-            print(item+'is not locked!')
+            print(item+' is not locked!')
             return
         readLock=self.lockTable[item][0]
         writeLock=self.lockTable[item][1]
@@ -91,5 +91,13 @@ class siteManager:
         self.siteList[id].cleanLockTable()
         
     def updateSite(self,id,target,value):
-        self.siteList[id].setValue(target,value)
-        
+        self.siteList[id].setValue(target,value)        
+    
+    def dumpOneSite(self,id):
+        if self.getSiteCondition(id)==0:    #site is down
+            print('Site '+str(id)+' is down. No data available.')
+        else:  #site is up or recovering
+            for k,v in self.getSite(id).value.items():
+                print(k,' ', v)
+            
+    

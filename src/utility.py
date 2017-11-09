@@ -78,3 +78,5 @@ def parseCommand(item):
             return (mode,record_mode, transaction_id,target)
     else:
         return None
+
+        
