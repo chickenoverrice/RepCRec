@@ -64,28 +64,34 @@ class lockManager:
                 else:
                     waitForGraph[r]=occupyList          
         #BSF
-        path=[]
+        parent=dict()
+        path=set()
         visited=set()
         queue=[]
-        queue.append(list(waitForGraph.keys())[0])
-        cycle=False
+        startNode=list(waitForGraph.keys())[0]
+        queue.append(startNode)
+        parent[startNode]=None
+        cycleStart=None
         while(len(queue)!=0):
-            if cycle:
+            if cycleStart!=None:
                 break
             node=queue.pop(0)
             visited.add(node)
-            path=[]
             try:
                 for neighbor in waitForGraph[node]:
                     if neighbor in visited:
-                        cycle=True
+                        cycleStart=neighbor
                         break
                     if neighbor not in visited:
                         queue.append(neighbor)
-                        path.append(neighbor) 
+                        parent[neighbor]=node 
             except:
                 pass
-                    
+        
+        while(parent[cycleStart]!=None):
+            path.add(cycleStart)
+            cycleStart=parent[cycleStart]
+            
         minDOB=sys.maxsize
         transactionToKill=None
         for id in path:
