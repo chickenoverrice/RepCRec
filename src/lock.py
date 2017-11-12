@@ -64,40 +64,45 @@ class lockManager:
                 else:
                     waitForGraph[r]=occupyList          
         #BSF
-        parent=dict()
-        path=set()
+
         visited=set()
-        queue=[]
-        startNode=list(waitForGraph.keys())[0]
-        queue.append(startNode)
-        parent[startNode]=None
-        cycleStart=None
-        while(len(queue)!=0):
-            if cycleStart!=None:
-                break
-            node=queue.pop(0)
-            visited.add(node)
-            try:
-                for neighbor in waitForGraph[node]:
-                    if neighbor in visited:
-                        cycleStart=neighbor
-                        break
-                    if neighbor not in visited:
-                        queue.append(neighbor)
-                        parent[neighbor]=node 
-            except:
-                pass
-        
-        while(parent[cycleStart]!=None):
-            path.add(cycleStart)
-            cycleStart=parent[cycleStart]
+        for key in waitForGraph:
+            if key in visited:
+                continue
+            transactionToKill=set()
+            queue=[]
+            parent=dict()
+            path=set()
+            startNode=key
+            queue.append(startNode)
+            parent[startNode]=None
+            cycleStart=None
+            while(len(queue)!=0):
+                if cycleStart!=None:
+                    break
+                node=queue.pop(0)
+                visited.add(node)
+                try:
+                    for neighbor in waitForGraph[node]:
+                        if neighbor in visited:
+                            cycleStart=neighbor
+                            break
+                        if neighbor not in visited:
+                            queue.append(neighbor)
+                            parent[neighbor]=node 
+                except:
+                    pass
             
-        minDOB=sys.maxsize
-        transactionToKill=None
-        for id in path:
-            DOB=tm.transactionTable[id].startTime
-            if DOB<minDOB:
-                minDOB=DOB
-                transactionToKill=id
+            while(parent[cycleStart]!=None):
+                path.add(cycleStart)
+                cycleStart=parent[cycleStart]
+                
+            minDOB=sys.maxsize
+            transactionToKill=None
+            for id in path:
+                DOB=tm.transactionTable[id].startTime
+                if DOB<minDOB:
+                    minDOB=DOB
+                    transactionToKill.add(id)
         
         return transactionToKill

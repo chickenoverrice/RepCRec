@@ -97,6 +97,7 @@ class siteManager:
         if self.getSiteCondition(id)==0:    #site is down
             print('Site '+str(id)+' is down. No data available.')
         else:  #site is up or recovering
+            print('Dumpping site'+str(id)+':')
             for k,v in self.getSite(id).value.items():
                 print(k,' ', v)
             
