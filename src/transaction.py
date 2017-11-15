@@ -147,6 +147,40 @@ class transactionManager():
                     if sm.getSiteCondition(site)==0:
                         return False
 
+<<<<<<< HEAD
+=======
+            #if no site is up:    
+            if count<len(accessedItem):
+                for i in range(10):
+                    if sm.getSiteCondition(i)==1:
+                        return True
+            else:
+                return True
+        return False
+    
+    def endTransactionStatus2(self,id,sm):#check if site has all locks
+        if self.transactionTable[id].getStatus()!=0:
+            return False        
+        else:
+            count=0
+            accessedItem=self.transactionTable[id].getAccessedItems()
+            #if single copy item accessed on a down site, abort
+            for item in accessedItem:
+                count+=1
+                if item in sm.invertSiteList:
+                    site=sm.invertSiteList[item]
+                    if sm.getSiteCondition(site)==0:
+                        return False
+                    else:
+                        if item not in sm.getSite(site).lockTable:
+                            return False
+                        lock=sm.getSite(site).getLockStatus(item)
+                        if id in lock[0] or id in lock[1]:
+                            return True
+                        else:
+                            return False
+
+>>>>>>> ab0eb38be1ffdb5936ba9775a5d2f8ae3189f543
             #if no site is up:    
             if count<len(accessedItem):
                 for i in range(10):
@@ -220,8 +254,11 @@ def processRecordOperation(op,tm,sm,lm,time,verbose):
                     tm.blockTransaction(op[2],op,lm)
                     if verbose:
                         print('Transaction T'+str(op[2])+' is waiting for read lock on item '+op[3])
+<<<<<<< HEAD
                     return False
         return True
+=======
+>>>>>>> ab0eb38be1ffdb5936ba9775a5d2f8ae3189f543
     else:            #write
         availableLock=tm.transactionTable[op[2]].getLock(op[3])
         if availableLock!=None:
@@ -240,8 +277,11 @@ def processRecordOperation(op,tm,sm,lm,time,verbose):
                 tm.blockTransaction(op[2],op,lm)
                 if verbose:
                     print('Transaction T'+str(op[2])+' is waiting for write lock on item '+op[3])
+<<<<<<< HEAD
                 return False
         return True
+=======
+>>>>>>> ab0eb38be1ffdb5936ba9775a5d2f8ae3189f543
                 
 def processTransactionOperation(op,tm,sm,lm,time,verbose):
     if op[1]==0 or op[1]==1:
@@ -252,6 +292,7 @@ def processTransactionOperation(op,tm,sm,lm,time,verbose):
             else:
                 print('Transaction T'+str(op[2])+' is created at time '+str(time)+'. Mode is read write.')
     else:
+<<<<<<< HEAD
         if tm.transactionTable[op[2]].mode==0:
             print('RO transaction T'+str(op[2])+' commits at time '+str(time))
         else:
@@ -287,6 +328,37 @@ def processTransactionOperation(op,tm,sm,lm,time,verbose):
                             canProceed=processRecordOperation(redoOP,tm,sm,lm,time,verbose)
                             if canProceed:
                                 lm.removeRequest(lock)
+=======
+        #canCommit=tm.endTransactionStatus(op[2],sm)   #check if transaction can commit
+        canCommit=tm.endTransactionStatus2(op[2],sm)
+        transactionToKill=lm.detectDeadLock(tm)            #check if transaction involved in deadlock
+        if op[2]==transactionToKill:
+            canCommit=False
+            if verbose:
+                print('Transaction T'+str(op[2])+' killed in deadlock.')
+        lockToRelease=None
+        if canCommit:           #commit
+            lockToRelease=tm.commitTransaction(op[2],sm)
+            if verbose:
+                print('Transaction T'+str(op[2])+' commits at time '+str(time))
+        else:                   #abort
+            lockToRelease=tm.abortTransaction(op[2],sm)
+            if verbose:
+                print('Transaction T'+str(op[2])+' aborts at time '+str(time))
+        if lockToRelease !=None:
+            for lock in lockToRelease:
+                lm.releaseLock(op[2],lock)
+                if len(lm.getLockRequest(lock))!=0: #some transaction is waiting on lock
+                    nextRequester=lm.getLockRequest(lock)[0]                
+                    lm.removeRequest(lock)
+                    redoOP=tm.unblockTransaction(nextRequester)
+                    if verbose:
+                        print('Operation ',redoOP, 'is allowed to execute.')
+                    if redoOP[0]==1:
+                        processTransactionOperation(redoOP,tm,sm,lm,time,verbose)
+                    else:
+                        processRecordOperation(redoOP,tm,sm,lm,time,verbose)
+>>>>>>> ab0eb38be1ffdb5936ba9775a5d2f8ae3189f543
         
 def processSiteOperation(op,sm,tm,verbose):
     if op[1]==0:

@@ -16,6 +16,7 @@ class lockManager:
             self.lockRequest['x'+str(i)]=[]
             
     def isLockAvailable(self,mode,item,sm):
+<<<<<<< HEAD
         #first check if sm is up or down
         siteUp=False
         if item in sm.invertSiteList:
@@ -40,6 +41,19 @@ class lockManager:
                     return False
         else:
             return False
+=======
+        #TO DO: first check if sm is up or down
+        if mode==0:
+            if len(self.writeLockTable[item])==0:
+                return True
+            else:
+                return False
+        else:
+            if len(self.readLockTable[item])==0 and len(self.writeLockTable[item])==0:
+                return True
+            else:
+                return False
+>>>>>>> ab0eb38be1ffdb5936ba9775a5d2f8ae3189f543
     
     def setLock(self,mode,transaction,item):
         if mode==0:
@@ -114,6 +128,7 @@ class lockManager:
                     break
                 node=queue.pop(0)
                 visited.add(node)
+<<<<<<< HEAD
                 if node not in waitForGraph:
                     break
                 for neighbor in waitForGraph[node]:
@@ -124,6 +139,32 @@ class lockManager:
                     if neighbor not in visited:
                         queue.append(neighbor)
                         parent[neighbor]=node 
+=======
+                try:
+                    for neighbor in waitForGraph[node]:
+                        if neighbor in visited:
+                            cycleStart=neighbor
+                            parent[cycleStart]=node
+                            break
+                        if neighbor not in visited:
+                            queue.append(neighbor)
+                            parent[neighbor]=node 
+                except:
+                    pass
+            
+            if cycleStart != None:
+                while(parent[cycleStart]!=None):
+                    path.add(cycleStart)
+                    cycleStart=parent[cycleStart]
+                    
+                minDOB=sys.maxsize
+                
+                for id in path:
+                    DOB=tm.transactionTable[id].startTime
+                    if DOB<minDOB:
+                        minDOB=DOB
+                        transactionToKill.add(id)
+>>>>>>> ab0eb38be1ffdb5936ba9775a5d2f8ae3189f543
         
             if cycleStart != None:
                 while(parent[cycleStart]!=None):
