@@ -2,12 +2,17 @@
 """
 Created on Tue Oct 31 16:19:39 2017
 
-@author: zxu
+@author: zhe&yuzheng
 """
 import re
         
 def parseCommand(item):
     '''
+    This function convert an input string to an operation.
+    Input type: str
+    Output type: tuple
+    
+    Output code:
     mode 0: operation on site
     mode 1: operation on transaction
     mode 2: operation on single record
@@ -23,7 +28,7 @@ def parseCommand(item):
     dump_mode 1: dump one site
     dump_mode 2: dump one value
     '''
-    if item[0]=='/':
+    if item[0]=='/':                        #comment
         return None
     item = re.sub('[^,begindumpfailrecoverwxt0-9(\.]', '', item)
     if item[0]=='b' or item[0]=='e':        #begin or end

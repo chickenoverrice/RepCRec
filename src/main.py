@@ -2,7 +2,7 @@
 """
 Created on Tue Oct 31 16:37:35 2017
 
-@author: zxu
+@author: zhe&yuzheng
 """
 from dbsite import siteManager
 import argparse
@@ -48,12 +48,8 @@ def main(verbose,inputFile):
                         processTransactionOperation(op,newTM,newSM,newLM,time,verbose)
                     else:
                         processRecordOperation(op,newTM,newSM,newLM,time,verbose)
-<<<<<<< HEAD
             if time%2==1:
                 killTransaction(newTM,newSM,newLM,time,verbose)                        
-=======
-                        
->>>>>>> ab0eb38be1ffdb5936ba9775a5d2f8ae3189f543
                             
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="A script to build a distributed database and process transactions", formatter_class=argparse.RawDescriptionHelpFormatter)
