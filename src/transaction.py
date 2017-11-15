@@ -78,7 +78,7 @@ class transactionManager():
         self.transactionTable=dict()
         self.dataLastValue=dict()           #most updated data value from commited transactions
         
-        for i in range(1,20,2):
+        for i in range(1,20):
             self.dataLastValue['x'+str(i)]=10*i
                 
     def readValue(self,item):
@@ -87,6 +87,9 @@ class transactionManager():
     def createTransaction(self,id,mode,startTime):
         self.transactionTable[id]=transaction(id,mode,startTime)
         self.transactionTable[id].setStatus(0)
+        if mode==0:
+            for item in self.dataLastValue:
+                self.transactionTable[id].updateValue(item,self.dataLastValue[item])
         
     def abortTransaction(self,id,sm):
         self.transactionTable[id].setStatus(2)
@@ -113,10 +116,11 @@ class transactionManager():
                     sm.setSiteCondition(i,1)
         return lock        
                 
-    def blockTransaction(self,id,op):
-        self.transactionTable[id].setStatus(3)
-        self.transactionTable[id].setBuffer(op)
-        
+    def blockTransaction(self,id,op,lm):
+        self.transactionTable[op[2]].setLockRequest(op[1],op[3])
+        self.transactionTable[op[2]].setBuffer(op)
+        self.transactionTable[op[2]].setStatus(3)
+        lm.setLockRequest(op[2],op[3])
         
     def unblockTransaction(self,id):
         '''
@@ -136,9 +140,42 @@ class transactionManager():
             #if single copy item accessed on a down site, abort
             for item in accessedItem:
                 count+=1
-                site=sm.invertSiteList[item]
-                if sm.getSiteCondition(site)==0:
-                    return False
+                if item in sm.invertSiteList:
+                    site=sm.invertSiteList[item]
+                    if sm.getSiteCondition(site)==0:
+                        return False
+
+            #if no site is up:    
+            if count<len(accessedItem):
+                for i in range(10):
+                    if sm.getSiteCondition(i)==1:
+                        return True
+            else:
+                return True
+        return False
+    
+    def endTransactionStatus2(self,id,sm):#check if site has all locks
+        if self.transactionTable[id].getStatus()!=0:
+            return False        
+        else:
+            count=0
+            accessedItem=self.transactionTable[id].getAccessedItems()
+            #if single copy item accessed on a down site, abort
+            for item in accessedItem:
+                count+=1
+                if item in sm.invertSiteList:
+                    site=sm.invertSiteList[item]
+                    if sm.getSiteCondition(site)==0:
+                        return False
+                    else:
+                        if item not in sm.getSite(site).lockTable:
+                            return False
+                        lock=sm.getSite(site).getLockStatus(item)
+                        if id in lock[0] or id in lock[1]:
+                            return True
+                        else:
+                            return False
+
             #if no site is up:    
             if count<len(accessedItem):
                 for i in range(10):
@@ -152,77 +189,99 @@ def processRecordOperation(op,tm,sm,lm,time,verbose):
     tm.transactionTable[op[2]].setAccessedItems(op[3])
     if op[1]==0:     #read
         if tm.transactionTable[op[2]].mode==0:           #RO
-            value=tm.readValue(op[3])
-            print('T'+str(tm.transactionTable[op[2]].id)+'reads '+op[3]+':'+str(value))
+            value=tm.transactionTable[op[2]].getCurrentValue(op[3])
+            print('T'+str(tm.transactionTable[op[2]].id)+' reads '+op[3]+':'+str(value))
         else:           #RW
             availableLock=tm.transactionTable[op[2]].getLock(op[3])
             if availableLock!=None:     #has lock
-                value=tm.transactionTable[op[2]].getCurrentValue(op[3])
-                print('T'+str(tm.transactionTable[op[2]].id)+'reads '+op[3]+':'+str(value))
+                if op[3] in tm.transactionTable[op[2]].currentValue:
+                    value=tm.transactionTable[op[2]].getCurrentValue(op[3])
+                else:
+                    value=tm.readValue(op[3])
+                print('T'+str(tm.transactionTable[op[2]].id)+' reads '+op[3]+':'+str(value))
             else:       #no lock
-                requestLock=lm.isLockAvailable(op[1],op[3])
+                requestLock=lm.isLockAvailable(op[1],op[3],sm)
                 if requestLock:
                     tm.transactionTable[op[2]].setLock(op[3],op[1])
                     lm.setLock(op[1],op[2],op[3])
                     for i in range(1,11):
                         sm.getSite(i).setLock(op[3],op[1],op[2])
-                    value=tm.transactionTable[op[2]].getCurrentValue(op[3])
-                    print('T'+str(tm.transactionTable[op[2]].id)+'reads '+op[3]+':'+str(value))
+                    if op[3] in tm.transactionTable[op[2]].currentValue:
+                        value=tm.transactionTable[op[2]].getCurrentValue(op[3])
+                    else:
+                        value=tm.readValue(op[3])
+                    print('T'+str(tm.transactionTable[op[2]].id)+' reads '+op[3]+':'+str(value))
                 else:
-                    tm.transactionTable[op[2]].setLockRequest(op[1],op[3])
-                    tm.transactionTable[op[2]].setBuffer(op)
-                    tm.transactionTable[op[2]].setStatus(3)
-                    lm.setLockRequest(op[2],op[3])
+                    tm.blockTransaction(op[2],op,lm)
+                    if verbose:
+                        print('Transaction T'+str(op[2])+' is waiting for read lock on item '+op[3])
     else:            #write
         availableLock=tm.transactionTable[op[2]].getLock(op[3])
         if availableLock!=None:
             tm.transactionTable[op[2]].updateValue(op[3],op[4])
         else:
-            requestLock=lm.isLockAvailable(op[1],op[3])
+            requestLock=lm.isLockAvailable(op[1],op[3],sm)
             if requestLock:
                 tm.transactionTable[op[2]].setLock(op[3],op[1])
                 lm.setLock(op[1],op[2],op[3])
                 for i in range(1,11):
                     sm.getSite(i).setLock(op[3],op[1],op[2])
                 tm.transactionTable[op[2]].updateValue(op[3],op[4])
+                if verbose:
+                    print('Transaction T'+str(op[2])+' write value '+str(op[4])+' to item '+op[3])
             else:
-                tm.transactionTable[op[2]].setLockRequest(op[1],op[3])
-                tm.transactionTable[op[2]].setBuffer(op)
-                tm.transactionTable[op[2]].setStatus(3)
-                lm.setLockRequest(op[2],op[3])    
+                tm.blockTransaction(op[2],op,lm)
+                if verbose:
+                    print('Transaction T'+str(op[2])+' is waiting for write lock on item '+op[3])
                 
 def processTransactionOperation(op,tm,sm,lm,time,verbose):
     if op[1]==0 or op[1]==1:
         tm.createTransaction(op[2],op[1],time)
+        if verbose:
+            if op[1]==0:
+                print('Transaction T'+str(op[2])+' is created at time '+str(time)+'. Mode is read only.')
+            else:
+                print('Transaction T'+str(op[2])+' is created at time '+str(time)+'. Mode is read write.')
     else:
-        canCommit=tm.endTransactionStatus(op[2],sm)   #check if transaction can commit
+        #canCommit=tm.endTransactionStatus(op[2],sm)   #check if transaction can commit
+        canCommit=tm.endTransactionStatus2(op[2],sm)
         transactionToKill=lm.detectDeadLock(tm)            #check if transaction involved in deadlock
         if op[2]==transactionToKill:
             canCommit=False
+            if verbose:
+                print('Transaction T'+str(op[2])+' killed in deadlock.')
         lockToRelease=None
         if canCommit:           #commit
             lockToRelease=tm.commitTransaction(op[2],sm)
+            if verbose:
+                print('Transaction T'+str(op[2])+' commits at time '+str(time))
         else:                   #abort
             lockToRelease=tm.abortTransaction(op[2],sm)
+            if verbose:
+                print('Transaction T'+str(op[2])+' aborts at time '+str(time))
         if lockToRelease !=None:
             for lock in lockToRelease:
-                nextRequester=lm.getLockRequest(lock)[0]
                 lm.releaseLock(op[2],lock)
-                lm.removeRequest(lock)
-                redoOP=tm.unblockTransaction(nextRequester)
-                if redoOP[0]==1:
-                    processTransactionOperation(redoOP,tm,sm,lm,time,verbose)
-                else:
-                    processRecordOperation(redoOP,tm,sm,lm,time,verbose)
-    if verbose:
-        print(tm.transactionTable[op[2]].id,tm.transactionTable[op[2]].mode,
-              tm.transactionTable[op[2]].status)
+                if len(lm.getLockRequest(lock))!=0: #some transaction is waiting on lock
+                    nextRequester=lm.getLockRequest(lock)[0]                
+                    lm.removeRequest(lock)
+                    redoOP=tm.unblockTransaction(nextRequester)
+                    if verbose:
+                        print('Operation ',redoOP, 'is allowed to execute.')
+                    if redoOP[0]==1:
+                        processTransactionOperation(redoOP,tm,sm,lm,time,verbose)
+                    else:
+                        processRecordOperation(redoOP,tm,sm,lm,time,verbose)
         
 def processSiteOperation(op,sm,tm,verbose):
     if op[1]==0:
         sm.failSite(op[2])
+        if verbose:
+            print('Site'+str(op[2])+' failed.')
     elif op[1]==1:
         sm.recoverSite(op[2])
+        if verbose:
+            print('Site'+str(op[2])+' is beening recovered.')
     else:#dump
         if op[2]==0:       #dump()
             for k,v in sm.siteList.items():

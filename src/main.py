@@ -14,37 +14,39 @@ import os
 import utility
 import lock
 import fileinput
+import sys
 
 os.chdir('..')
 directory=os.path.abspath(os.curdir)
 
 def main(verbose,inputFile):  
     if inputFile !=None:
-        inputFile = os.path.join(directory, inputFile)  
+        inputFile = os.path.join(directory, inputFile) 
+    elif inputFile ==None:
+        inputFile=sys.stdin
     newSM=siteManager()
     newSM.initSite()
     newTM=transactionManager()
     newLM=lock.lockManager()
     time=0
-    
-    if inputFile != None:    
-        with fileinput.input(files=inputFile) as f:
-            for instruction in f:
-                time+=1
-                instruction=instruction.strip().lower().split(')')
-                for item in instruction:
-                    if item:
-                        op=utility.parseCommand(item)
-                        if op ==None:
-                            continue
-                        if verbose:
-                            print('current time:'+str(time)+' executing operation:',op)
-                        if op[0]==0:
-                            processSiteOperation(op,newSM,newTM,verbose)
-                        elif op[0]==1:
-                            processTransactionOperation(op,newTM,newSM,newLM,time,verbose)
-                        else:
-                            processRecordOperation(op,newTM,newSM,newLM,time,verbose)
+ 
+    with fileinput.input(files=inputFile) as f:
+        for instruction in f:
+            time+=1
+            instruction=instruction.strip().lower().split(')')
+            for item in instruction:
+                if item:
+                    op=utility.parseCommand(item)
+                    if op ==None:
+                        continue
+                    if verbose:
+                        print('current time:'+str(time)+' executing operation:',op)
+                    if op[0]==0:
+                        processSiteOperation(op,newSM,newTM,verbose)
+                    elif op[0]==1:
+                        processTransactionOperation(op,newTM,newSM,newLM,time,verbose)
+                    else:
+                        processRecordOperation(op,newTM,newSM,newLM,time,verbose)
                         
                             
 if __name__ == '__main__':
