@@ -36,7 +36,7 @@ class site:
         
     def setLock(self,item,mode,transaction):            #Assume lock is accessible. Check should be done by LM!!            
         if item not in self.lockTable:
-            temp=[item]
+            temp=[transaction]
             self.lockTable[item] = [[None for _ in range(1)] for _ in range(2)]
             if mode==0:
                 self.lockTable[item][0]=temp

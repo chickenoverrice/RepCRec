@@ -15,10 +15,31 @@ class lockManager:
             self.writeLockTable['x'+str(i)]=[]
             self.lockRequest['x'+str(i)]=[]
             
-    def isLockAvailable(self,mode,item):
-        if len(self.readLockTable[item])==0 and len(self.writeLockTable[item])==0:
-            return True
-        return False
+    def isLockAvailable(self,mode,item,sm):
+        #first check if sm is up or down
+        siteUp=False
+        if item in sm.invertSiteList:
+            site=sm.invertSiteList[item]
+            if sm.getSiteCondition(site)!=0:
+                siteUp=True
+        else:            
+            for i in range(10):
+                if sm.getSiteCondition(i)!=0:
+                    siteUp=True
+                    break
+        if siteUp:
+            if mode==0:
+                if len(self.writeLockTable[item])==0:
+                    return True
+                else:
+                    return False
+            else:
+                if len(self.readLockTable[item])==0 and len(self.writeLockTable[item])==0:
+                    return True
+                else:
+                    return False
+        else:
+            return False
     
     def setLock(self,mode,transaction,item):
         if mode==0:
@@ -34,7 +55,8 @@ class lockManager:
             return self.writeLockTable[item]
         
     def setLockRequest(self,transaction,item):    #only non available lock requests go in here
-        self.lockRequest[item].append(transaction)
+        if transaction not in self.lockRequest[item]:
+            self.lockRequest[item].append(transaction)
         
     def getLockRequest(self,item):
         return self.lockRequest[item]
@@ -42,9 +64,19 @@ class lockManager:
     def removeRequest(self,item):
         self.lockRequest[item].pop(0)
     
+    def removeAllRequestFromTransaction(self,id):
+        for item in self.lockRequest:
+            try:
+                self.lockRequest[item].remove(id)
+            except:
+                pass
+    
     def releaseLock(self,transaction,item):
         try:
             self.readLockTable[item].remove(transaction)
+        except:
+            pass
+        try:
             self.writeLockTable[item].remove(transaction)
         except:
             pass
@@ -62,10 +94,10 @@ class lockManager:
                 if r in waitForGraph:
                     waitForGraph[r].extend(occupyList)
                 else:
-                    waitForGraph[r]=occupyList          
+                    waitForGraph[r]=occupyList 
         #BSF
-
         visited=set()
+        transactionToKill=set()
         for key in waitForGraph:
             if key in visited:
                 continue
@@ -82,27 +114,30 @@ class lockManager:
                     break
                 node=queue.pop(0)
                 visited.add(node)
-                try:
-                    for neighbor in waitForGraph[node]:
-                        if neighbor in visited:
-                            cycleStart=neighbor
-                            break
-                        if neighbor not in visited:
-                            queue.append(neighbor)
-                            parent[neighbor]=node 
-                except:
-                    pass
-            
-            while(parent[cycleStart]!=None):
-                path.add(cycleStart)
-                cycleStart=parent[cycleStart]
-                
-            minDOB=sys.maxsize
-            transactionToKill=None
-            for id in path:
-                DOB=tm.transactionTable[id].startTime
-                if DOB<minDOB:
-                    minDOB=DOB
-                    transactionToKill.add(id)
+                if node not in waitForGraph:
+                    break
+                for neighbor in waitForGraph[node]:
+                    if neighbor in visited:
+                        cycleStart=node
+                        #parent[cycleStart]=node
+                        break
+                    if neighbor not in visited:
+                        queue.append(neighbor)
+                        parent[neighbor]=node 
         
+            if cycleStart != None:
+                while(parent[cycleStart]!=None):
+                    path.add(cycleStart)
+                    path.add(parent[cycleStart])
+                    cycleStart=parent[cycleStart]
+                    
+                maxDOB=-sys.maxsize
+                temp=-1
+                for id in path:
+                    DOB=tm.transactionTable[id].startTime
+                    if DOB>maxDOB:
+                        maxDOB=DOB
+                        temp=id
+                if temp!=-1:
+                    transactionToKill.add(temp)
         return transactionToKill

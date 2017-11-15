@@ -23,6 +23,8 @@ def parseCommand(item):
     dump_mode 1: dump one site
     dump_mode 2: dump one value
     '''
+    if item[0]=='/':
+        return None
     item = re.sub('[^,begindumpfailrecoverwxt0-9(\.]', '', item)
     if item[0]=='b' or item[0]=='e':        #begin or end
         mode=1
