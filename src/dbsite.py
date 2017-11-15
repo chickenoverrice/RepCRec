@@ -2,7 +2,7 @@
 """
 Created on Tue Oct 31 12:41:03 2017
 
-@author: zxu
+@author: zhe&yuzheng
 """
 
 class site:

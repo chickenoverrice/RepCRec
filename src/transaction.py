@@ -2,7 +2,7 @@
 """
 Created on Tue Oct 31 16:19:39 2017
 
-@author: zxu
+@author: zhe&yuzheng
 """
 
 class transaction():
@@ -132,31 +132,8 @@ class transactionManager():
         op=self.transactionTable[id].getBuffer()[0]
         self.transactionTable[id].clearBuffer()
         return op
-        
-    def endTransactionStatus(self,id,sm):
-        if self.transactionTable[id].getStatus()!=0:
-            return False        
-        else:
-            count=0
-            accessedItem=self.transactionTable[id].getAccessedItems()
-            #if single copy item accessed on a down site, abort
-            for item in accessedItem:
-                count+=1
-                if item in sm.invertSiteList:
-                    site=sm.invertSiteList[item]
-                    if sm.getSiteCondition(site)==0:
-                        return False
-
-            #if no site is up:    
-            if count<len(accessedItem):
-                for i in range(10):
-                    if sm.getSiteCondition(i)==1:
-                        return True
-            else:
-                return True
-        return False
     
-    def endTransactionStatus2(self,id,sm):#check if site has all locks
+    def endTransactionStatus(self,id,sm):#check if site has all locks
         if self.transactionTable[id].getStatus()!=0:
             return False        
         else:
@@ -254,9 +231,8 @@ def processTransactionOperation(op,tm,sm,lm,time,verbose):
     else:
         if tm.transactionTable[op[2]].mode==0:
             print('RO transaction T'+str(op[2])+' commits at time '+str(time))
-        else:
-            #canCommit=tm.endTransactionStatus(op[2],sm)   #check if transaction can commit
-            canCommit=tm.endTransactionStatus2(op[2],sm)
+        else:  
+            canCommit=tm.endTransactionStatus(op[2],sm) #check if transaction can commit
             transactionToKill=lm.detectDeadLock(tm)            #check if transaction involved in deadlock
             for t in transactionToKill:
                 if op[2]==t:
@@ -296,7 +272,7 @@ def processSiteOperation(op,sm,tm,verbose):
     elif op[1]==1:
         sm.recoverSite(op[2])
         if verbose:
-            print('Site'+str(op[2])+' is beening recovered.')
+            print('Site'+str(op[2])+' is being recovered.')
     else:#dump
         if op[2]==0:       #dump()
             for k,v in sm.siteList.items():

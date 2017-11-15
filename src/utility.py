@@ -8,9 +8,9 @@ import re
         
 def parseCommand(item):
     '''
-    This function convert an input string to an operation.
-    Input type: str
-    Output type: tuple
+    This method converts an input string to an operation.
+    Param: str
+    Return: tuple
     
     Output code:
     mode 0: operation on site
