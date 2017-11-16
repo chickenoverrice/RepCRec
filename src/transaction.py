@@ -6,6 +6,9 @@ Created on Tue Oct 31 16:19:39 2017
 """
 
 class transaction():
+    '''
+    This class represents a transaction.
+    '''
     def __init__(self,id,mode,startTime):
         self.id=id
         self.mode=mode
@@ -18,11 +21,27 @@ class transaction():
         self.accessedItems=set()
         
     def getLock(self,item):
+        '''
+        This method gets the lock that the transaction is holding on a data item.
+        
+        Param:
+            item: target record (xi), type str
+        Return:
+            int or None
+        '''
         if item in self.lock:
             return self.lock[item]
         return None
     
     def setLock(self,item,mode):
+        '''
+        This method adds a lock to the transaction when it acquires one.
+        
+        Param:
+            item: target record (xi), type str
+            mode: lock mode (R/W), type int
+        Return:
+        '''
         if item in self.lock:
             if self.lock[item]==0 and mode==1:
                 self.lock[item]=mode
@@ -30,6 +49,13 @@ class transaction():
             self.lock[item]=mode
     
     def releaseLock(self):
+        '''
+        This method gets all the locks that the transaction holds.
+        
+        Param:
+        Return:
+            set
+        '''
         lockedItems=set()
         for key in self.lock:
             lockedItems.add(key)
@@ -37,6 +63,13 @@ class transaction():
         return lockedItems
     
     def updateValue(self,item,value):
+        '''
+        This method updates the value of a data item in the data table inside the transaction.
+        
+        Param:
+            item: target record (xi), type str
+            value: value to write to the item, type int
+        '''
         self.currentValue[item]=value
         
     def getCurrentValue(self,item):
