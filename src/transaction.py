@@ -184,6 +184,7 @@ class transactionManager():
     def __init__(self):
         self.transactionTable=dict()
         self.dataLastValue=dict()           #most updated data value from commited transactions
+        self.failureBlockedRequest=dict()
         
         for i in range(1,20):
             self.dataLastValue['x'+str(i)]=10*i
@@ -273,10 +274,11 @@ class transactionManager():
         Return:
             set
         '''
-        self.transactionTable[op[2]].setLockRequest(op[1],op[3])
         self.transactionTable[op[2]].setBuffer(op)
         self.transactionTable[op[2]].setStatus(3)
-        lm.setLockRequest(op[2],op[3])
+        if self.transactionTable[op[2]].mode==1:
+            self.transactionTable[op[2]].setLockRequest(op[1],op[3])
+            lm.setLockRequest(op[2],op[3])
         
     def unblockTransaction(self,id):
         '''
@@ -333,6 +335,39 @@ class transactionManager():
                 if upSite==0:
                     canCommit=False
         return canCommit
+    
+    def isItemAvailable(self,op,sm):
+        '''
+        This method checks if a data item available for read/write.
+        
+        Param:
+            item: target record (xi), type str
+            sm: site manager, type siteManager
+        Return:
+            Boolean
+        '''
+        upSite=0
+        available=True
+        if op[3] in sm.invertSiteList:
+            site=sm.invertSiteList[op[3]]
+            siteCondition=sm.getSiteCondition(site)
+            if siteCondition==0:
+                available=False
+        else:
+            for i in range(10):
+                if sm.getSiteCondition(i)==1:
+                    upSite+=1
+            if upSite==0:
+                available=False
+        if not available:
+            if op[3] in self.failureBlockedRequest:
+                self.failureBlockedRequest[op[3]].append(op)
+            else:
+                self.failureBlockedRequest[op[3]]=[op]
+        return available
+    
+    def removeFailureRequest(self,item):
+        self.failureBlockedRequest[item].pop(0)        
 
 def processRecordOperation(op,tm,sm,lm,time,verbose):
     '''
@@ -350,6 +385,11 @@ def processRecordOperation(op,tm,sm,lm,time,verbose):
     if tm.transactionTable[op[2]].getStatus()==2:#if already aborted, do nothing
         return False
     tm.transactionTable[op[2]].setAccessedItems(op[3])
+    if not tm.isItemAvailable(op,sm):
+        tm.blockTransaction(op[2],op,lm)
+        if verbose:
+            print('Transactin T'+str(op[2])+' is blocked because site failure.')
+        return False
     if op[1]==0:     #read
         if tm.transactionTable[op[2]].mode==0:           #RO
             value=tm.transactionTable[op[2]].getCurrentValue(op[3])
@@ -423,7 +463,10 @@ def processTransactionOperation(op,tm,sm,lm,time,verbose):
                 print('Transaction T'+str(op[2])+' is created at time '+str(time)+'. Mode is read write.')
     else:
         if tm.transactionTable[op[2]].mode==0:
-            print('RO transaction T'+str(op[2])+' commits at time '+str(time))
+            if tm.transactionTable[op[2]].status==0:
+                print('RO transaction T'+str(op[2])+' commits at time '+str(time))
+            else:
+                print('RO transaction T'+str(op[2])+' aborts at time '+str(time))
         else:  
             canCommit=tm.endTransactionStatus(op[2],sm) #check if transaction can commit
             transactionToKill=lm.detectDeadLock(tm)            #check if transaction involved in deadlock
@@ -457,7 +500,7 @@ def processTransactionOperation(op,tm,sm,lm,time,verbose):
                             if canProceed:
                                 lm.removeRequest(lock)
         
-def processSiteOperation(op,sm,tm,verbose):
+def processSiteOperation(op,tm,sm,lm,time,verbose):
     '''
     This method processes operations related to a site, including site failure, recovery and dumping.
     
@@ -473,6 +516,25 @@ def processSiteOperation(op,sm,tm,verbose):
             print('Site'+str(op[2])+' failed.')
     elif op[1]==1:
         sm.recoverSite(op[2])
+        items=set()
+        for i in range(2,21,2):
+            items.add('x'+str(i))
+        if op[2]%2==0:
+            for i in range(1,20,2):
+                if op[2]==(i%10+1):
+                    items.add('x'+str(i))
+        for item in items:
+            if item in tm.failureBlockedRequest:
+                redoOP=tm.failureBlockedRequest[item][0]
+                tm.unblockTransaction(redoOP[2])
+                if verbose:
+                    print('Operation ',redoOP, 'is allowed to execute.')
+                if redoOP[0]==1:
+                    processTransactionOperation(redoOP,tm,sm,lm,time,verbose)
+                else:
+                    canProceed=processRecordOperation(redoOP,tm,sm,lm,time,verbose)
+                    if canProceed:
+                        tm.removeFailureRequest(redoOP[3])
         if verbose:
             print('Site'+str(op[2])+' is being recovered.')
     else:#dump

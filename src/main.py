@@ -49,7 +49,7 @@ def main(verbose,inputFile):
                     if verbose:
                         print('current time:'+str(time)+' executing operation:',op)
                     if op[0]==0:
-                        processSiteOperation(op,newSM,newTM,verbose)
+                        processSiteOperation(op,newTM,newSM,newLM,time,verbose)
                     elif op[0]==1:
                         processTransactionOperation(op,newTM,newSM,newLM,time,verbose)
                     else:
