@@ -54,8 +54,7 @@ def main(verbose,inputFile):
                         processTransactionOperation(op,newTM,newSM,newLM,time,verbose)
                     else:
                         processRecordOperation(op,newTM,newSM,newLM,time,verbose)
-            if time%2==1:
-                killTransaction(newTM,newSM,newLM,time,verbose)                        
+                    killTransaction(newTM,newSM,newLM,time,verbose)                        
                             
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="A script to build a distributed database and process transactions", formatter_class=argparse.RawDescriptionHelpFormatter)

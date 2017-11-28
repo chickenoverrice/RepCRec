@@ -31,6 +31,8 @@ def parseCommand(item):
     if item[0]=='/':                        #comment
         return None
     item = re.sub('[^,begindumpfailrecoverwxt0-9(\.]', '', item)
+    if item==None or item=='':
+        return None
     if item[0]=='b' or item[0]=='e':        #begin or end
         mode=1
         start=item.find('t')
