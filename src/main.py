@@ -22,44 +22,47 @@ import sys
 os.chdir('..')
 directory=os.path.abspath(os.curdir)
 
-def main(verbose,inputFile):  
-    #file read
-    if inputFile !=None:
-        inputFile = os.path.join(directory, inputFile) 
-    elif inputFile ==None:
-        inputFile=sys.stdin
-        
+def dispatcher(f,sm,tm,lm,time,verbose):
+    for instruction in f:
+        time+=1
+        instruction=instruction.strip().lower().split(')')
+        for item in instruction:
+            if item:
+                op=utility.parseCommand(item)
+                if op ==None:
+                    continue
+                if verbose:
+                    print('current time:'+str(time)+' executing operation:',op)
+                if op[0]==0:
+                    processSiteOperation(op,tm,sm,lm,time,verbose)
+                elif op[0]==1:
+                    processTransactionOperation(op,tm,sm,lm,time,verbose)
+                else:
+                    processRecordOperation(op,tm,sm,lm,time,verbose)
+                killTransaction(tm,sm,lm,time,verbose)   
+    
+def main(verbose,inputFile):     
     #initialize managers    
     newSM=siteManager()
     newSM.initSite()
     newTM=transactionManager()
     newLM=lock.lockManager()
     time=0
- 
-    #process instructions
-    with fileinput.input(files=inputFile) as f:
-        for instruction in f:
-            time+=1
-            instruction=instruction.strip().lower().split(')')
-            for item in instruction:
-                if item:
-                    op=utility.parseCommand(item)
-                    if op ==None:
-                        continue
-                    if verbose:
-                        print('current time:'+str(time)+' executing operation:',op)
-                    if op[0]==0:
-                        processSiteOperation(op,newTM,newSM,newLM,time,verbose)
-                    elif op[0]==1:
-                        processTransactionOperation(op,newTM,newSM,newLM,time,verbose)
-                    else:
-                        processRecordOperation(op,newTM,newSM,newLM,time,verbose)
-                    killTransaction(newTM,newSM,newLM,time,verbose)                        
+    
+    #file read
+    if inputFile !=None:
+        inputFile = os.path.join(directory, inputFile)
+        with fileinput.input(files=inputFile) as f:
+            dispatcher(f,newSM,newTM,newLM,time,verbose)
+    else:
+        print('Read instruction from command line.')
+        dispatcher(sys.stdin,newSM,newTM,newLM,time,verbose)
+                    
                             
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="A script to build a distributed database and process transactions", formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--verbose', dest='verbose', default=False, action='store_true', help='This option prints out detailed execution information.')
-    parser.add_argument('--f', type=str,  default=None, dest='inputFile', help='This option allows input from a file. Please enter full file directory after --f.')
+    parser.add_argument('--f', type=str, dest='inputFile', help='This option allows input from a file. Please enter full file directory after --f.')
     args = parser.parse_args()
     args = parser.parse_args()
     main(verbose=args.verbose,inputFile=args.inputFile)
