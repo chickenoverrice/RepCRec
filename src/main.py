@@ -11,16 +11,10 @@ from transaction import processRecordOperation
 from transaction import processTransactionOperation
 from transaction import processSiteOperation
 from transaction import killTransaction
-import os
 import utility
 import lock
 import fileinput
 import sys
-
-
-#file directory. Change!!!!!
-os.chdir('..')
-directory=os.path.abspath(os.curdir)
 
 def dispatcher(f,sm,tm,lm,time,verbose):
     for instruction in f:
@@ -51,7 +45,6 @@ def main(verbose,inputFile):
     
     #file read
     if inputFile !=None:
-        inputFile = os.path.join(directory, inputFile)
         with fileinput.input(files=inputFile) as f:
             dispatcher(f,newSM,newTM,newLM,time,verbose)
     else:

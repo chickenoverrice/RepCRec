@@ -479,12 +479,10 @@ def processTransactionOperation(op,tm,sm,lm,time,verbose):
             lockToRelease=None
             if canCommit:           #commit
                 lockToRelease=tm.commitTransaction(op[2],sm,lm)
-                if verbose:
-                    print('Transaction T'+str(op[2])+' commits at time '+str(time))
+                print('Transaction T'+str(op[2])+' commits at time '+str(time))
             else:                   #abort
                 lockToRelease=tm.abortTransaction(op[2],sm,lm)
-                if verbose:
-                    print('Transaction T'+str(op[2])+' aborts at time '+str(time))
+                print('Transaction T'+str(op[2])+' aborts at time '+str(time))
             if lockToRelease !=None:
                 for lock in lockToRelease:
                     lm.releaseLock(op[2],lock)
@@ -561,8 +559,7 @@ def killTransaction(tm,sm,lm,time,verbose):
     transactionToKill=lm.detectDeadLock(tm)
     for t in transactionToKill:
         lockToRelease=tm.abortTransaction(t,sm,lm)
-        if verbose:
-            print('Transaction T'+str(t)+' aborts at time '+str(time))
+        print('Transaction T'+str(t)+' aborts at time '+str(time))
         if lockToRelease !=None:
             for lock in lockToRelease:
                 lm.releaseLock(t,lock)
