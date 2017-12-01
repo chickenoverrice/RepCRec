@@ -313,8 +313,8 @@ class transactionManager():
             canCommit=True
             #if single copy item accessed on a down site, abort
             for item in accessedItem:
-                count+=1
                 if item in sm.invertSiteList:
+                    count+=1
                     site=sm.invertSiteList[item]
                     if sm.getSiteCondition(site)==0:
                         canCommit=False
@@ -334,6 +334,7 @@ class transactionManager():
                         upSite+=1
                 if upSite==0:
                     canCommit=False
+
         return canCommit
     
     def isItemAvailable(self,op,sm):
