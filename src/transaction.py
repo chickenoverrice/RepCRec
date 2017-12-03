@@ -278,7 +278,7 @@ class transactionManager():
         self.transactionTable[op[2]].setStatus(3)
         if self.transactionTable[op[2]].mode==1:
             self.transactionTable[op[2]].setLockRequest(op[1],op[3])
-            lm.setLockRequest(op[2],op[3])
+            lm.setLockRequest(op[2],op[3],op[1])
         
     def unblockTransaction(self,id):
         '''
@@ -488,7 +488,7 @@ def processTransactionOperation(op,tm,sm,lm,time,verbose):
                 for lock in lockToRelease:
                     lm.releaseLock(op[2],lock)
                     if len(lm.getLockRequest(lock))!=0: #some transaction is waiting on lock
-                        nextRequester=lm.getLockRequest(lock)[0]                
+                        nextRequester=lm.getLockRequest(lock)[0]
                         redoOP=tm.unblockTransaction(nextRequester)
                         if verbose:
                             print('Operation ',redoOP, 'is allowed to execute.')

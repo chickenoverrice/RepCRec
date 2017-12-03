@@ -5,6 +5,8 @@ Created on Tue Oct 31 12:41:03 2017
 @author: zhe&yuzheng
 """
 import sys
+import copy
+
 class lockManager:
     '''
     Lock manager maintains and updates global lock table and lock requests.
@@ -13,10 +15,14 @@ class lockManager:
         self.readLockTable=dict()
         self.writeLockTable=dict()
         self.lockRequest=dict()
+        self.readLockRequest=dict()
+        self.writeLockRequest=dict()
         for i in range(1,21):
             self.readLockTable['x'+str(i)]=[]
             self.writeLockTable['x'+str(i)]=[]
             self.lockRequest['x'+str(i)]=[]
+            self.readLockRequest['x'+str(i)]=[]
+            self.writeLockRequest['x'+str(i)]=[]
             
     def isLockAvailable(self,mode,item,sm):
         '''
@@ -63,11 +69,15 @@ class lockManager:
             item: target record (xi), type str
         Return: 
         '''
+        print('set lock',transaction,item,mode)
         if mode==0:
-            self.readLockTable[item].append(transaction)
+            if transaction not in self.readLockTable[item]:
+                self.readLockTable[item].append(transaction)
         else:
-            self.writeLockTable[item].append(transaction)
-            #check size of writeLockTable[item]==1?
+            if transaction not in self.writeLockTable[item]: 
+                self.writeLockTable[item].append(transaction)
+            #if len(self.writeLockTable[item])>1:
+                #self.writeLockTable[item]=list(set(self.writeLockTable[item]))
             
     def getLockStatus(self,mode,item):
         '''
@@ -83,7 +93,7 @@ class lockManager:
         else:
             return self.writeLockTable[item]
         
-    def setLockRequest(self,transaction,item):    #only non available lock requests go in here
+    def setLockRequest(self,transaction,item,mode):    #only non available lock requests go in here
         '''
         This method adds a lock request to the lockRequest table.
         
@@ -92,8 +102,15 @@ class lockManager:
             item: target record (xi), type str
         Return:
         '''
+        if mode==0:
+            if transaction not in self.readLockRequest[item]:
+                self.readLockRequest[item].append(transaction)
+        else:
+            if transaction not in self.writeLockRequest[item]:
+                self.writeLockRequest[item].append(transaction)
         if transaction not in self.lockRequest[item]:
             self.lockRequest[item].append(transaction)
+        
         
     def getLockRequest(self,item):
         '''
@@ -102,7 +119,7 @@ class lockManager:
         Param:
             item: target record (xi), type str
         Return: list
-        '''
+        '''  
         return self.lockRequest[item]
     
     def removeRequest(self,item):
@@ -113,8 +130,17 @@ class lockManager:
             item: target record (xi), type str
         Return:
         '''
-        self.lockRequest[item].pop(0)
-    
+        transaction=self.lockRequest[item].pop(0)
+        if item in self.readLockRequest:
+            if transaction in self.readLockRequest[item]:
+                if transaction==self.readLockRequest[item][0]:
+                    self.readLockRequest[item].pop(0)
+        if item in self.writeLockRequest:
+            if transaction in self.writeLockRequest[item]:
+                if transaction==self.writeLockRequest[item][0]:
+                    self.writeLockRequest[item].pop(0)
+        
+        
     def removeAllRequestFromTransaction(self,id):
         '''
         This method removes a transaction from the lock request list.
@@ -128,6 +154,16 @@ class lockManager:
                 self.lockRequest[item].remove(id)
             except:
                 pass
+        for item in self.readLockRequest:
+            try:
+                self.lockRequest[item].remove(id)
+            except:
+                pass
+        for item in self.writeLockRequest:
+            try:
+                self.writeLockRequest[item].remove(id)
+            except:
+                pass
     
     def releaseLock(self,transaction,item):
         '''
@@ -138,6 +174,18 @@ class lockManager:
             item: target record (xi), type str
         Return:
         '''
+        readLock=[]
+        writeLock=[]
+        for t in self.readLockTable[item]:
+            if t!=transaction:
+                readLock.append(t)
+        self.readLockTable[item]=copy.deepcopy(readLock)
+        
+        for t in self.writeLockTable[item]:
+            if t!=transaction:
+                writeLock.append(t)
+        self.writeLockTable[item]=copy.deepcopy(writeLock)
+        '''
         try:
             self.readLockTable[item].remove(transaction)
         except:
@@ -146,8 +194,9 @@ class lockManager:
             self.writeLockTable[item].remove(transaction)
         except:
             pass
+        '''
         
-    def detectDeadLock(self,tm):#Compare lockRequest to write locks
+    def detectDeadLock(self,tm):#Compare all lockRequest to write locks. compare write lock request to read locks.
         '''
         This method detect if deadlock is present among lock requests and gives a list of transactions
         to be killed if there is deadlock.
@@ -166,7 +215,16 @@ class lockManager:
                     waitForGraph[r].extend(occupyList)
                 else:
                     waitForGraph[r]=occupyList 
-        #BSF
+                    
+        for key in self.writeLockRequest:
+            requestList=self.writeLockRequest[key]
+            occupyList=self.readLockTable[key]
+            for r in requestList:
+                if r in waitForGraph:
+                    waitForGraph[r].extend(occupyList)
+                else:
+                    waitForGraph[r]=occupyList 
+        #BFS
         visited=set()
         transactionToKill=set()
         for key in waitForGraph:
@@ -210,4 +268,5 @@ class lockManager:
                         temp=id
                 if temp!=-1:
                     transactionToKill.add(temp)
+        #print('to kill',transactionToKill)
         return transactionToKill
