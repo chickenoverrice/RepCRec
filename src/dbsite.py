@@ -106,7 +106,7 @@ class site:
         Return:
         '''
         if item not in self.lockTable:
-            print(item+' is not locked!')
+            #print(item+' is not locked!')
             return
         readLock=self.lockTable[item][0]
         writeLock=self.lockTable[item][1]
@@ -217,7 +217,10 @@ class siteManager:
             print('Site '+str(id)+' is down. No data available.')
         else:  #site is up or recovering
             print('Dumpping site'+str(id)+':')
-            for k,v in self.getSite(id).value.items():
+            values=self.getSite(id).value.items()
+            if len(values)==0:
+                print('Site'+str(id)+' just recovered from failure. No transaction committed on this site yet. No data is available.')
+            for k,v in values:
                 print(k,' ', v)
             
     

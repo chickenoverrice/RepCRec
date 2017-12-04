@@ -433,8 +433,7 @@ def processRecordOperation(op,tm,sm,lm,time,verbose):
                 for i in range(1,11):
                     sm.getSite(i).setLock(op[3],op[1],op[2])
                 tm.transactionTable[op[2]].updateValue(op[3],op[4])
-                if verbose:
-                    print('Transaction T'+str(op[2])+' write value '+str(op[4])+' to item '+op[3])
+                print('Transaction T'+str(op[2])+' intends to write value '+str(op[4])+' to item '+op[3])
             else:
                 tm.blockTransaction(op[2],op,lm)
                 if verbose:

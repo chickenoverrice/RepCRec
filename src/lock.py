@@ -69,7 +69,6 @@ class lockManager:
             item: target record (xi), type str
         Return: 
         '''
-        print('set lock',transaction,item,mode)
         if mode==0:
             if transaction not in self.readLockTable[item]:
                 self.readLockTable[item].append(transaction)
