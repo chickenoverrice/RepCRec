@@ -1,4 +1,4 @@
-// Test 31
+// Test 19
 // An almost circular deadlock scenario with failures.
 // T3 fails (T2 and T4 do not fail because the site is up when they execute)
 // because site 4 fails.
@@ -14,7 +14,7 @@ fail(4)
 recover(4)
 R(T4,x4)
 R(T5,x5)
-R(T1,x1)
+R(T1,x6)
 R(T2,x2)
 W(T1,x2,10)
 W(T2,x3,20)
